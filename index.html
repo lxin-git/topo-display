@@ -6,6 +6,51 @@
     <title>Topology Visualization</title>
     <script src="https://d3js.org/d3.v7.min.js"></script>
     <style>
+        /* Carbon Design System - Design Tokens */
+        :root {
+            /* Colors - IBM Carbon Theme (White/g10) */
+            --cds-background: #ffffff;
+            --cds-layer-01: #f4f4f4;
+            --cds-layer-02: #ffffff;
+            --cds-layer-03: #f4f4f4;
+            --cds-field-01: #f4f4f4;
+            --cds-field-02: #ffffff;
+            --cds-ui-background: #f4f4f4;
+            --cds-interactive: #0f62fe;
+            --cds-interactive-hover: #0353e9;
+            --cds-interactive-active: #002d9c;
+            --cds-text-primary: #161616;
+            --cds-text-secondary: #525252;
+            --cds-text-placeholder: #a8a8a8;
+            --cds-text-on-color: #ffffff;
+            --cds-link-primary: #0f62fe;
+            --cds-link-primary-hover: #0043ce;
+            --cds-border-subtle: #e0e0e0;
+            --cds-border-strong: #8d8d8d;
+            --cds-border-interactive: #0f62fe;
+            --cds-focus: #0f62fe;
+            --cds-support-error: #da1e28;
+            --cds-support-success: #24a148;
+            --cds-support-warning: #f1c21b;
+            --cds-support-info: #0043ce;
+            
+            /* Spacing - Carbon 8px grid */
+            --cds-spacing-01: 0.125rem;  /* 2px */
+            --cds-spacing-02: 0.25rem;   /* 4px */
+            --cds-spacing-03: 0.5rem;    /* 8px */
+            --cds-spacing-04: 0.75rem;   /* 12px */
+            --cds-spacing-05: 1rem;      /* 16px */
+            --cds-spacing-06: 1.5rem;    /* 24px */
+            --cds-spacing-07: 2rem;      /* 32px */
+            --cds-spacing-08: 2.5rem;    /* 40px */
+            --cds-spacing-09: 3rem;      /* 48px */
+            --cds-spacing-10: 4rem;      /* 64px */
+            
+            /* Typography */
+            --cds-font-family: 'IBM Plex Sans', 'Helvetica Neue', Arial, sans-serif;
+            --cds-font-family-mono: 'IBM Plex Mono', 'Menlo', 'DejaVu Sans Mono', monospace;
+        }
+
         * {
             margin: 0;
             padding: 0;
@@ -13,25 +58,22 @@
         }
 
         body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            font-family: var(--cds-font-family);
+            background: var(--cds-ui-background);
             min-height: 100vh;
-            padding: 20px;
+            color: var(--cds-text-primary);
             display: flex;
             flex-direction: column;
         }
 
         .container {
-            max-width: 1800px;
+            max-width: 100%;
             width: 100%;
-            margin: 0 auto;
-            background: white;
-            border-radius: 15px;
-            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
-            overflow: hidden;
+            margin: 0;
+            background: var(--cds-background);
             display: flex;
             flex-direction: column;
-            height: calc(100vh - 40px);
+            height: 100vh;
         }
 
         .main-content {
@@ -42,12 +84,13 @@
             min-height: 0;
         }
 
+        /* JSON Panel */
         .json-panel {
             width: 400px;
             min-width: 250px;
             max-width: 800px;
-            background: #f8f9fa;
-            border-right: 2px solid #e9ecef;
+            background: var(--cds-layer-01);
+            border-right: 1px solid var(--cds-border-subtle);
             display: none;
             flex-direction: column;
             overflow: hidden;
@@ -60,9 +103,9 @@
         }
 
         .json-panel-header {
-            padding: 15px 20px;
-            background: #667eea;
-            color: white;
+            padding: var(--cds-spacing-05);
+            background: var(--cds-layer-02);
+            border-bottom: 1px solid var(--cds-border-subtle);
             display: flex;
             justify-content: space-between;
             align-items: center;
@@ -71,43 +114,49 @@
 
         .json-panel-header h3 {
             margin: 0;
-            font-size: 16px;
+            font-size: 0.875rem;
+            font-weight: 600;
+            color: var(--cds-text-primary);
         }
 
         .json-panel-close {
-            background: none;
+            background: transparent;
             border: none;
-            color: white;
-            font-size: 24px;
+            color: var(--cds-text-primary);
+            font-size: 1.25rem;
             cursor: pointer;
-            padding: 0;
-            width: 30px;
-            height: 30px;
+            padding: var(--cds-spacing-02);
+            width: 2rem;
+            height: 2rem;
             display: flex;
             align-items: center;
             justify-content: center;
-            border-radius: 4px;
-            transition: background 0.3s;
+            transition: background 110ms;
         }
 
         .json-panel-close:hover {
-            background: rgba(255, 255, 255, 0.2);
+            background: var(--cds-layer-01);
+        }
+
+        .json-panel-close:focus {
+            outline: 2px solid var(--cds-focus);
+            outline-offset: -2px;
         }
 
         .json-panel-content {
             flex: 1;
             overflow: auto;
-            padding: 15px;
+            padding: var(--cds-spacing-05);
             min-height: 0;
         }
 
         .json-display {
-            background: #2d2d2d;
-            color: #f8f8f2;
-            padding: 15px;
-            border-radius: 8px;
-            font-family: 'Courier New', monospace;
-            font-size: 11px;
+            background: var(--cds-layer-02);
+            color: var(--cds-text-primary);
+            padding: var(--cds-spacing-05);
+            border: 1px solid var(--cds-border-subtle);
+            font-family: var(--cds-font-family-mono);
+            font-size: 0.75rem;
             line-height: 1.5;
             overflow-x: auto;
             white-space: pre;
@@ -120,18 +169,15 @@
             right: 0;
             top: 0;
             bottom: 0;
-            width: 5px;
+            width: 4px;
             cursor: ew-resize;
             background: transparent;
             z-index: 10;
         }
 
-        .resize-handle:hover {
-            background: #667eea;
-        }
-
+        .resize-handle:hover,
         .resize-handle.resizing {
-            background: #667eea;
+            background: var(--cds-border-interactive);
         }
 
         .visualization-container {
@@ -141,34 +187,37 @@
             min-width: 0;
         }
 
+        /* Header */
         .header {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            padding: 30px;
-            text-align: center;
+            background: var(--cds-layer-02);
+            border-bottom: 1px solid var(--cds-border-subtle);
+            padding: var(--cds-spacing-07) var(--cds-spacing-06);
         }
 
         .header h1 {
-            font-size: 2.5em;
-            margin-bottom: 10px;
-            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.2);
+            font-size: 2rem;
+            font-weight: 400;
+            margin-bottom: var(--cds-spacing-03);
+            color: var(--cds-text-primary);
         }
 
         .header p {
-            font-size: 1.1em;
-            opacity: 0.9;
+            font-size: 0.875rem;
+            color: var(--cds-text-secondary);
         }
 
+        /* Controls */
         .controls {
-            padding: 20px 30px;
-            background: #f8f9fa;
-            border-bottom: 2px solid #e9ecef;
+            padding: var(--cds-spacing-05) var(--cds-spacing-06);
+            background: var(--cds-layer-01);
+            border-bottom: 1px solid var(--cds-border-subtle);
             display: flex;
-            gap: 15px;
+            gap: var(--cds-spacing-05);
             flex-wrap: wrap;
             align-items: center;
         }
 
+        /* File Input */
         .file-input-wrapper {
             position: relative;
             overflow: hidden;
@@ -181,105 +230,133 @@
         }
 
         .file-input-label {
-            display: inline-block;
-            padding: 12px 24px;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            border-radius: 8px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            padding: 0 var(--cds-spacing-05);
+            height: 3rem;
+            background: var(--cds-interactive);
+            color: var(--cds-text-on-color);
+            border: none;
             cursor: pointer;
-            font-weight: 600;
-            transition: all 0.3s ease;
-            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+            font-size: 0.875rem;
+            font-weight: 400;
+            transition: background 110ms;
+            outline: 2px solid transparent;
+            outline-offset: -2px;
         }
 
         .file-input-label:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 6px 20px rgba(102, 126, 234, 0.6);
+            background: var(--cds-interactive-hover);
         }
 
+        .file-input-label:focus {
+            outline: 2px solid var(--cds-focus);
+            outline-offset: -2px;
+        }
+
+        /* Buttons - Carbon Style */
         .btn {
-            padding: 12px 24px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            padding: 0 var(--cds-spacing-05);
+            height: 3rem;
             border: none;
-            border-radius: 8px;
             cursor: pointer;
-            font-weight: 600;
-            transition: all 0.3s ease;
-            font-size: 14px;
+            font-size: 0.875rem;
+            font-weight: 400;
+            transition: background 110ms;
+            outline: 2px solid transparent;
+            outline-offset: -2px;
+            font-family: var(--cds-font-family);
         }
 
         .btn-primary {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+            background: var(--cds-interactive);
+            color: var(--cds-text-on-color);
         }
 
         .btn-primary:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 6px 20px rgba(102, 126, 234, 0.6);
+            background: var(--cds-interactive-hover);
+        }
+
+        .btn-primary:focus {
+            outline: 2px solid var(--cds-focus);
+            outline-offset: -2px;
         }
 
         .btn-secondary {
-            background: #6c757d;
-            color: white;
+            background: transparent;
+            color: var(--cds-text-primary);
+            border: 1px solid var(--cds-interactive);
         }
 
         .btn-secondary:hover {
-            background: #5a6268;
-            transform: translateY(-2px);
+            background: var(--cds-interactive-hover);
+            color: var(--cds-text-on-color);
         }
 
+        .btn-secondary:focus {
+            outline: 2px solid var(--cds-focus);
+            outline-offset: -2px;
+        }
+
+        /* Stats */
         .stats {
             display: flex;
-            gap: 20px;
+            gap: var(--cds-spacing-06);
             margin-left: auto;
             flex-wrap: wrap;
         }
 
         .stat-item {
-            background: white;
-            padding: 10px 20px;
-            border-radius: 8px;
-            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+            background: var(--cds-layer-02);
+            padding: var(--cds-spacing-04) var(--cds-spacing-05);
+            border: 1px solid var(--cds-border-subtle);
         }
 
         .stat-label {
-            font-size: 0.85em;
-            color: #6c757d;
-            margin-bottom: 4px;
+            font-size: 0.75rem;
+            color: var(--cds-text-secondary);
+            margin-bottom: var(--cds-spacing-02);
+            text-transform: uppercase;
+            letter-spacing: 0.32px;
         }
 
         .stat-value {
-            font-size: 1.5em;
-            font-weight: bold;
-            color: #667eea;
+            font-size: 1.25rem;
+            font-weight: 600;
+            color: var(--cds-text-primary);
         }
 
+        /* Visualization */
         #visualization {
             flex: 1;
-            background: #fafbfc;
+            background: var(--cds-background);
             position: relative;
             min-height: 500px;
         }
 
         .node {
             cursor: pointer;
-            transition: all 0.3s ease;
+            transition: all 110ms;
         }
 
         .node:hover {
-            filter: brightness(1.2);
+            filter: brightness(1.1);
         }
 
         .node circle {
-            stroke: #fff;
+            stroke: var(--cds-background);
             stroke-width: 2px;
-            transition: all 0.3s ease;
+            transition: all 110ms;
         }
 
         .node.highlighted circle {
-            stroke: #ff6b6b;
-            stroke-width: 4px;
-            filter: drop-shadow(0 0 8px #ff6b6b);
+            stroke: var(--cds-support-error);
+            stroke-width: 3px;
+            filter: drop-shadow(0 0 6px var(--cds-support-error));
         }
 
         .node.dimmed {
@@ -287,36 +364,39 @@
         }
 
         .node text {
-            font-size: 12px;
+            font-size: 0.75rem;
+            font-family: var(--cds-font-family);
             pointer-events: none;
-            text-shadow: 0 1px 2px rgba(255, 255, 255, 0.8);
+            fill: var(--cds-text-primary);
         }
 
         .link {
-            stroke: #999;
+            stroke: var(--cds-border-strong);
             stroke-opacity: 0.6;
-            stroke-width: 1.5px;
+            stroke-width: 1px;
             fill: none;
         }
 
         .link-label {
-            font-size: 10px;
-            fill: #666;
+            font-size: 0.625rem;
+            fill: var(--cds-text-secondary);
             pointer-events: none;
+            font-family: var(--cds-font-family);
         }
 
+        /* Tooltip - Carbon Style */
         .tooltip {
             position: absolute;
-            padding: 12px 16px;
-            background: rgba(0, 0, 0, 0.9);
-            color: white;
-            border-radius: 8px;
+            padding: var(--cds-spacing-05);
+            background: var(--cds-layer-02);
+            color: var(--cds-text-primary);
+            border: 1px solid var(--cds-border-subtle);
             pointer-events: none;
             opacity: 0;
-            transition: opacity 0.3s;
+            transition: opacity 110ms;
             max-width: 300px;
             z-index: 1000;
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
         }
 
         .tooltip.show {
@@ -324,43 +404,43 @@
         }
 
         .tooltip-title {
-            font-weight: bold;
-            margin-bottom: 8px;
-            font-size: 14px;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.3);
-            padding-bottom: 6px;
+            font-weight: 600;
+            margin-bottom: var(--cds-spacing-03);
+            font-size: 0.875rem;
+            border-bottom: 1px solid var(--cds-border-subtle);
+            padding-bottom: var(--cds-spacing-03);
         }
 
         .tooltip-content {
-            font-size: 12px;
-            line-height: 1.6;
+            font-size: 0.75rem;
+            line-height: 1.5;
         }
 
         .tooltip-row {
-            margin: 4px 0;
+            margin: var(--cds-spacing-02) 0;
         }
 
         .tooltip-label {
-            color: #aaa;
-            margin-right: 8px;
+            color: var(--cds-text-secondary);
+            margin-right: var(--cds-spacing-03);
         }
 
+        /* Legend - Carbon Style */
         .legend {
             position: absolute;
-            top: 20px;
-            right: 20px;
-            background: white;
-            border-radius: 8px;
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+            top: var(--cds-spacing-05);
+            right: var(--cds-spacing-05);
+            background: var(--cds-layer-02);
+            border: 1px solid var(--cds-border-subtle);
             max-width: 250px;
             z-index: 100;
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
         }
 
         .legend-header {
-            padding: 12px 15px;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            border-radius: 8px 8px 0 0;
+            padding: var(--cds-spacing-04) var(--cds-spacing-05);
+            background: var(--cds-layer-01);
+            border-bottom: 1px solid var(--cds-border-subtle);
             cursor: pointer;
             display: flex;
             justify-content: space-between;
@@ -369,18 +449,20 @@
         }
 
         .legend-header:hover {
-            background: linear-gradient(135deg, #5568d3 0%, #653a8b 100%);
+            background: var(--cds-layer-03);
         }
 
         .legend-title {
-            font-weight: bold;
-            font-size: 14px;
+            font-weight: 600;
+            font-size: 0.875rem;
             margin: 0;
+            color: var(--cds-text-primary);
         }
 
         .legend-toggle {
-            font-size: 18px;
-            transition: transform 0.3s ease;
+            font-size: 1rem;
+            transition: transform 110ms;
+            color: var(--cds-text-primary);
         }
 
         .legend-toggle.collapsed {
@@ -390,7 +472,7 @@
         .legend-content {
             max-height: 400px;
             overflow-y: auto;
-            padding: 15px;
+            padding: var(--cds-spacing-05);
             display: none;
         }
 
@@ -401,61 +483,73 @@
         .legend-item {
             display: flex;
             align-items: center;
-            margin: 8px 0;
-            font-size: 12px;
+            margin: var(--cds-spacing-03) 0;
+            font-size: 0.75rem;
         }
 
         .legend-color {
-            width: 20px;
-            height: 20px;
+            width: 16px;
+            height: 16px;
             border-radius: 50%;
-            margin-right: 10px;
-            border: 2px solid #fff;
-            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+            margin-right: var(--cds-spacing-03);
+            border: 1px solid var(--cds-border-subtle);
             flex-shrink: 0;
         }
 
         .legend-label {
             word-break: break-word;
+            color: var(--cds-text-primary);
         }
 
+        /* Search Box - Carbon Style */
         .search-box {
             flex: 1;
             min-width: 250px;
+            max-width: 400px;
         }
 
         .search-box input {
             width: 100%;
-            padding: 12px 16px;
-            border: 2px solid #e9ecef;
-            border-radius: 8px;
-            font-size: 14px;
-            transition: all 0.3s ease;
+            padding: 0 var(--cds-spacing-05);
+            height: 3rem;
+            border: none;
+            border-bottom: 1px solid var(--cds-border-strong);
+            background: var(--cds-field-01);
+            font-size: 0.875rem;
+            font-family: var(--cds-font-family);
+            color: var(--cds-text-primary);
+            transition: all 110ms;
+            outline: 2px solid transparent;
+            outline-offset: -2px;
+        }
+
+        .search-box input::placeholder {
+            color: var(--cds-text-placeholder);
         }
 
         .search-box input:focus {
-            outline: none;
-            border-color: #667eea;
-            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+            outline: 2px solid var(--cds-focus);
+            outline-offset: -2px;
         }
 
+        /* Loading - Carbon Style */
         .loading {
             position: absolute;
             top: 50%;
             left: 50%;
             transform: translate(-50%, -50%);
             text-align: center;
-            color: #667eea;
+            color: var(--cds-text-primary);
         }
 
         .loading-spinner {
-            border: 4px solid #f3f3f3;
-            border-top: 4px solid #667eea;
+            border: 3px solid var(--cds-border-subtle);
+            border-top: 3px solid var(--cds-interactive);
             border-radius: 50%;
-            width: 50px;
-            height: 50px;
+            width: 48px;
+            height: 48px;
             animation: spin 1s linear infinite;
-            margin: 0 auto 15px;
+            margin: 0 auto var(--cds-spacing-05);
         }
 
         @keyframes spin {
@@ -463,97 +557,110 @@
             100% { transform: rotate(360deg); }
         }
 
+        /* Error Message - Carbon Style */
         .error-message {
-            background: #f8d7da;
-            color: #721c24;
-            padding: 15px;
-            margin: 20px;
-            border-radius: 8px;
-            border: 1px solid #f5c6cb;
+            background: var(--cds-support-error);
+            color: var(--cds-text-on-color);
+            padding: var(--cds-spacing-05);
+            margin: var(--cds-spacing-05);
+            border-left: 3px solid #750e13;
         }
 
+        /* Zoom Controls - Carbon Style */
         .zoom-controls {
             position: absolute;
-            bottom: 20px;
-            right: 20px;
+            bottom: var(--cds-spacing-05);
+            right: var(--cds-spacing-05);
             display: flex;
             flex-direction: column;
-            gap: 10px;
+            gap: 1px;
+            background: var(--cds-border-subtle);
         }
 
         .zoom-btn {
-            width: 40px;
-            height: 40px;
-            border-radius: 50%;
-            background: white;
-            border: 2px solid #667eea;
-            color: #667eea;
-            font-size: 20px;
+            width: 2.5rem;
+            height: 2.5rem;
+            background: var(--cds-layer-02);
+            border: none;
+            color: var(--cds-text-primary);
+            font-size: 1.25rem;
             cursor: pointer;
             display: flex;
             align-items: center;
             justify-content: center;
-            transition: all 0.3s ease;
-            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+            transition: background 110ms;
+            outline: 2px solid transparent;
+            outline-offset: -2px;
         }
 
         .zoom-btn:hover {
-            background: #667eea;
-            color: white;
-            transform: scale(1.1);
+            background: var(--cds-layer-01);
+        }
+
+        .zoom-btn:focus {
+            outline: 2px solid var(--cds-focus);
+            outline-offset: -2px;
+        }
+
+        .zoom-btn:first-child {
+            border-top: 1px solid var(--cds-border-subtle);
+        }
+
+        .zoom-btn:last-child {
+            border-bottom: 1px solid var(--cds-border-subtle);
         }
     </style>
 </head>
 <body>
     <div class="container">
         <div class="header">
-            <h1>🌐 Topology Visualization</h1>
-            <p>Interactive Network Topology Graph Viewer</p>
+            <h1>Topology Visualization</h1>
+            <p>Interactive network topology viewer with node and edge relationships</p>
         </div>
 
         <div class="controls">
             <div class="file-input-wrapper">
-                <input type="file" id="fileInput" accept=".json" />
+                <input type="file" id="fileInput" accept=".json">
                 <label for="fileInput" class="file-input-label">
-                    📁 Load JSON File
+                    Load JSON File
                 </label>
             </div>
 
             <div class="search-box">
-                <input type="text" id="searchInput" placeholder="Search nodes by label, plugin, or ID..." />
+                <input type="text" id="searchInput" placeholder="Search nodes...">
             </div>
 
-            <button class="btn btn-primary" id="showJsonBtn" style="display: none;">📄 Show JSON Data</button>
-            <button class="btn btn-primary" id="resetBtn">🔄 Reset View</button>
-            <button class="btn btn-secondary" id="clearBtn">🗑️ Clear</button>
+            <button id="showJsonBtn" class="btn btn-primary">Show JSON Data</button>
+            <button id="resetBtn" class="btn btn-primary">Reset View</button>
+            <button id="clearBtn" class="btn btn-secondary">Clear</button>
 
             <div class="stats">
                 <div class="stat-item">
                     <div class="stat-label">Nodes</div>
-                    <div class="stat-value" id="nodeCount">0</div>
+                    <div id="nodeCount" class="stat-value">0</div>
                 </div>
                 <div class="stat-item">
                     <div class="stat-label">Edges</div>
-                    <div class="stat-value" id="edgeCount">0</div>
+                    <div id="edgeCount" class="stat-value">0</div>
                 </div>
             </div>
         </div>
 
         <div class="main-content">
-            <div class="json-panel" id="jsonPanel">
+            <div id="jsonPanel" class="json-panel">
                 <div class="json-panel-header">
                     <h3>JSON Data</h3>
-                    <button class="json-panel-close" id="closeJsonBtn">×</button>
+                    <button id="closeJsonBtn" class="json-panel-close">×</button>
                 </div>
                 <div class="json-panel-content">
-                    <div class="json-display" id="jsonDisplay"></div>
+                    <div id="jsonDisplay" class="json-display"></div>
                 </div>
-                <div class="resize-handle" id="resizeHandle"></div>
+                <div id="resizeHandle" class="resize-handle"></div>
             </div>
 
             <div class="visualization-container">
                 <div id="visualization">
-                    <div class="loading" id="loading" style="display: none;">
+                    <div id="loading" class="loading" style="display: none;">
                         <div class="loading-spinner"></div>
                         <div>Loading topology data...</div>
                     </div>
@@ -568,13 +675,10 @@
                 this.data = null;
                 this.svg = null;
                 this.simulation = null;
+                this.colorScale = d3.scaleOrdinal(d3.schemeCategory10);
                 this.zoom = null;
-                this.container = null;
+                this.g = null;
                 this.tooltip = null;
-                this.colorScale = null;
-                this.pluginTypes = new Set();
-                this.isResizing = false;
-                
                 this.init();
             }
 
@@ -588,76 +692,69 @@
             setupResizeHandle() {
                 const handle = document.getElementById('resizeHandle');
                 const panel = document.getElementById('jsonPanel');
-                
+                let isResizing = false;
+
                 handle.addEventListener('mousedown', (e) => {
-                    this.isResizing = true;
+                    isResizing = true;
                     handle.classList.add('resizing');
-                    document.body.style.cursor = 'ew-resize';
-                    document.body.style.userSelect = 'none';
                     e.preventDefault();
                 });
 
                 document.addEventListener('mousemove', (e) => {
-                    if (!this.isResizing) return;
-                    
+                    if (!isResizing) return;
+
                     const containerRect = document.querySelector('.main-content').getBoundingClientRect();
                     const newWidth = e.clientX - containerRect.left;
-                    
+
                     // Constrain width between min and max
                     const minWidth = 250;
                     const maxWidth = 800;
                     const constrainedWidth = Math.max(minWidth, Math.min(maxWidth, newWidth));
-                    
-                    panel.style.width = constrainedWidth + 'px';
+
+                    panel.style.width = `${constrainedWidth}px`;
                 });
 
                 document.addEventListener('mouseup', () => {
-                    if (this.isResizing) {
-                        this.isResizing = false;
+                    if (isResizing) {
+                        isResizing = false;
                         handle.classList.remove('resizing');
-                        document.body.style.cursor = '';
-                        document.body.style.userSelect = '';
                     }
                 });
             }
 
             setupEventListeners() {
                 document.getElementById('fileInput').addEventListener('change', (e) => this.handleFileUpload(e));
-                document.getElementById('resetBtn').addEventListener('click', () => this.resetView());
-                document.getElementById('clearBtn').addEventListener('click', () => this.clear());
-                document.getElementById('searchInput').addEventListener('input', (e) => this.handleSearch(e));
                 document.getElementById('showJsonBtn').addEventListener('click', () => this.toggleJsonPanel());
+                document.getElementById('resetBtn').addEventListener('click', () => this.resetView());
+                document.getElementById('searchInput').addEventListener('input', (e) => this.handleSearch(e.target.value));
                 document.getElementById('closeJsonBtn').addEventListener('click', () => this.toggleJsonPanel());
+                document.getElementById('clearBtn').addEventListener('click', () => this.clear());
             }
 
             createTooltip() {
-                this.tooltip = d3.select('body')
-                    .append('div')
+                this.tooltip = d3.select('body').append('div')
                     .attr('class', 'tooltip');
             }
 
             setupSVG() {
-                const vizContainer = d3.select('#visualization');
-                const width = vizContainer.node().clientWidth;
-                const height = vizContainer.node().clientHeight;
+                const vizContainer = document.getElementById('visualization');
+                const width = vizContainer.clientWidth;
+                const height = vizContainer.clientHeight;
 
-                this.svg = vizContainer.append('svg')
-                    .attr('width', width)
-                    .attr('height', height);
+                this.svg = d3.select('#visualization')
+                    .append('svg')
+                    .attr('width', '100%')
+                    .attr('height', '100%');
 
-                // Create zoom behavior
                 this.zoom = d3.zoom()
-                    .scaleExtent([0.1, 10])
+                    .scaleExtent([0.1, 4])
                     .on('zoom', (event) => {
-                        this.container.attr('transform', event.transform);
+                        this.g.attr('transform', event.transform);
                     });
 
                 this.svg.call(this.zoom);
+                this.g = this.svg.append('g');
 
-                // Create container for graph elements
-                this.container = this.svg.append('g');
-
-                // Add zoom controls
                 this.addZoomControls();
             }
 
@@ -682,7 +779,7 @@
 
                 controls.append('button')
                     .attr('class', 'zoom-btn')
-                    .html('⊙')
+                    .html('⟲')
                     .on('click', () => this.resetView());
             }
 
@@ -694,104 +791,80 @@
 
                 try {
                     const text = await file.text();
-                    console.log('File loaded, parsing JSON...');
-                    this.data = JSON.parse(text);
-                    this.rawJsonText = text; // Store raw JSON text
-                    console.log('JSON parsed successfully');
-                    console.log('Nodes count:', this.data.nodes ? this.data.nodes.length : 0);
-                    console.log('Edges count:', this.data.edges ? this.data.edges.length : 0);
-                    console.log('Sample node:', this.data.nodes ? this.data.nodes[0] : null);
-                    console.log('Sample edge:', this.data.edges ? this.data.edges[0] : null);
-                    
-                    this.processData();
+                    const data = JSON.parse(text);
+
+                    if (!data.nodes || !data.edges) {
+                        throw new Error('Invalid JSON format. Expected "nodes" and "edges" arrays.');
+                    }
+
+                    this.processData(data);
                     this.render();
-                    
-                    // Show the JSON Data button
-                    document.getElementById('showJsonBtn').style.display = 'inline-block';
-                    console.log('Show JSON Data button displayed');
-                    
                     document.getElementById('loading').style.display = 'none';
+
                 } catch (error) {
-                    console.error('Error loading file:', error);
-                    console.error('Error stack:', error.stack);
-                    this.showError('Failed to load or parse JSON file. Please check the file format.');
                     document.getElementById('loading').style.display = 'none';
+                    this.showError(`Error loading file: ${error.message}`);
+                    console.error('Error:', error);
                 }
             }
 
-            processData() {
-                console.log('Processing data...');
-                if (!this.data || !this.data.nodes || !this.data.edges) {
-                    throw new Error('Invalid data format');
-                }
+            processData(data) {
+                this.data = data;
 
-                console.log('Creating node ID set...');
-                // Create a set of valid node IDs for quick lookup
-                const validNodeIds = new Set(this.data.nodes.map(n => n.id));
-                console.log('Valid node IDs count:', validNodeIds.size);
+                // Create a Set of valid node IDs for efficient lookup
+                const validNodeIds = new Set(data.nodes.map(node => node.id));
 
                 // Filter out edges that reference non-existent nodes
-                const originalEdgeCount = this.data.edges.length;
-                console.log('Original edge count:', originalEdgeCount);
-                
-                this.data.edges = this.data.edges.filter((edge, index) => {
+                const originalEdgeCount = data.edges.length;
+
+                this.data.edges = data.edges.filter(edge => {
                     const sourceValid = validNodeIds.has(edge.source);
                     const destValid = validNodeIds.has(edge.destination);
-                    
+
                     if (!sourceValid || !destValid) {
-                        if (index < 5) { // Log first 5 invalid edges
-                            console.log(`Invalid edge ${index}:`, {
-                                source: edge.source,
-                                sourceValid,
-                                destination: edge.destination,
-                                destValid
-                            });
-                        }
+                        console.warn('Filtered out invalid edge:', {
+                            source: edge.source,
+                            sourceValid,
+                            destination: edge.destination,
+                            destValid
+                        });
+                        return false;
                     }
-                    
-                    return sourceValid && destValid;
+                    return true;
                 });
 
-                const filteredEdgeCount = originalEdgeCount - this.data.edges.length;
-                console.log(`Filtered out ${filteredEdgeCount} edges with invalid node references`);
-                console.log('Valid edges count:', this.data.edges.length);
-
-                // Extract unique plugin types
-                this.pluginTypes = new Set(this.data.nodes.map(n => n.plugin));
-                console.log('Plugin types:', Array.from(this.pluginTypes));
-
-                // Create color scale
-                const plugins = Array.from(this.pluginTypes);
-                this.colorScale = d3.scaleOrdinal()
-                    .domain(plugins)
-                    .range(d3.schemeTableau10.concat(d3.schemePaired));
+                const filteredEdgeCount = this.data.edges.length;
+                if (filteredEdgeCount < originalEdgeCount) {
+                    console.log(`Filtered ${originalEdgeCount - filteredEdgeCount} invalid edges`);
+                }
 
                 // Update stats
-                document.getElementById('nodeCount').textContent = this.data.nodes.length;
-                document.getElementById('edgeCount').textContent = this.data.edges.length;
-                console.log('Data processing complete');
+                document.getElementById('nodeCount').textContent = data.nodes.length;
+                document.getElementById('edgeCount').textContent = filteredEdgeCount;
+
+                // Create color scale based on plugin types
+                const plugins = [...new Set(data.nodes.map(n => n.plugin))];
+                this.colorScale = d3.scaleOrdinal()
+                    .domain(plugins)
+                    .range(d3.schemeCategory10);
+
+                this.createLegend(plugins);
             }
 
             render() {
-                console.log('Starting render...');
                 // Clear previous visualization
-                this.container.selectAll('*').remove();
+                this.g.selectAll('*').remove();
 
-                const width = this.svg.node().clientWidth;
-                const height = this.svg.node().clientHeight;
-                console.log('SVG dimensions:', width, 'x', height);
+                const width = document.getElementById('visualization').clientWidth;
+                const height = document.getElementById('visualization').clientHeight;
 
-                console.log('Creating force simulation with', this.data.nodes.length, 'nodes and', this.data.edges.length, 'edges');
-                
-                // Convert edges to use 'target' instead of 'destination' for D3.js compatibility
+                // Convert edges to D3 format (destination -> target)
                 const links = this.data.edges.map(edge => ({
                     source: edge.source,
-                    target: edge.destination,
+                    target: edge.destination,  // Map destination to target for D3
                     relation: edge.relation
                 }));
-                
-                console.log('Converted edges to links format');
-                
+
                 // Create force simulation
                 this.simulation = d3.forceSimulation(this.data.nodes)
                     .force('link', d3.forceLink(links)
@@ -800,18 +873,16 @@
                     .force('charge', d3.forceManyBody().strength(-300))
                     .force('center', d3.forceCenter(width / 2, height / 2))
                     .force('collision', d3.forceCollide().radius(30));
-                
-                console.log('Force simulation created');
 
                 // Create links
-                const link = this.container.append('g')
+                const link = this.g.append('g')
                     .selectAll('path')
                     .data(links)
-                    .join('path')
+                    .enter().append('path')
                     .attr('class', 'link')
                     .attr('marker-end', 'url(#arrowhead)');
 
-                // Add arrowhead marker
+                // Add arrow marker
                 this.svg.append('defs').append('marker')
                     .attr('id', 'arrowhead')
                     .attr('viewBox', '-0 -5 10 10')
@@ -825,20 +896,20 @@
                     .attr('fill', '#999');
 
                 // Create link labels
-                const linkLabel = this.container.append('g')
+                const linkLabel = this.g.append('g')
                     .selectAll('text')
                     .data(links)
-                    .join('text')
+                    .enter().append('text')
                     .attr('class', 'link-label')
                     .text(d => d.relation);
 
                 // Create nodes
-                const node = this.container.append('g')
+                const node = this.g.append('g')
                     .selectAll('g')
                     .data(this.data.nodes)
-                    .join('g')
+                    .enter().append('g')
                     .attr('class', 'node')
-                    .call(this.drag(this.simulation));
+                    .call(this.drag());
 
                 node.append('circle')
                     .attr('r', 8)
@@ -847,13 +918,12 @@
                 node.append('text')
                     .attr('dx', 12)
                     .attr('dy', 4)
-                    .text(d => d.label.length > 30 ? d.label.substring(0, 30) + '...' : d.label);
+                    .text(d => d.label);
 
-                // Add tooltips
                 node.on('mouseover', (event, d) => this.showTooltip(event, d))
                     .on('mouseout', () => this.hideTooltip());
 
-                // Update positions on simulation tick
+                // Update positions on each tick
                 this.simulation.on('tick', () => {
                     link.attr('d', d => {
                         const dx = d.target.x - d.source.x;
@@ -868,12 +938,9 @@
 
                     node.attr('transform', d => `translate(${d.x},${d.y})`);
                 });
-
-                // Create legend
-                this.createLegend();
             }
 
-            createLegend() {
+            createLegend(plugins) {
                 // Remove existing legend
                 d3.select('.legend').remove();
 
@@ -881,14 +948,13 @@
                     .append('div')
                     .attr('class', 'legend');
 
-                // Create header with toggle
+                // Legend header (clickable to toggle)
                 const header = legend.append('div')
                     .attr('class', 'legend-header')
-                    .on('click', function() {
-                        const content = d3.select(this.parentNode).select('.legend-content');
-                        const toggle = d3.select(this).select('.legend-toggle');
+                    .on('click', () => {
+                        const content = legend.select('.legend-content');
+                        const toggle = legend.select('.legend-toggle');
                         const isShowing = content.classed('show');
-                        
                         content.classed('show', !isShowing);
                         toggle.classed('collapsed', isShowing);
                     });
@@ -901,12 +967,10 @@
                     .attr('class', 'legend-toggle')
                     .text('▼');
 
-                // Create content container
+                // Legend content
                 const content = legend.append('div')
-                    .attr('class', 'legend-content');
+                    .attr('class', 'legend-content show');
 
-                const plugins = Array.from(this.pluginTypes).sort();
-                
                 plugins.forEach(plugin => {
                     const item = content.append('div')
                         .attr('class', 'legend-item');
@@ -915,7 +979,7 @@
                         .attr('class', 'legend-color')
                         .style('background-color', this.colorScale(plugin));
 
-                    item.append('span')
+                    item.append('div')
                         .attr('class', 'legend-label')
                         .text(plugin);
                 });
@@ -923,164 +987,130 @@
 
             showTooltip(event, d) {
                 const tooltip = this.tooltip;
-                
-                tooltip.html(`
-                    <div class="tooltip-title">${d.label}</div>
-                    <div class="tooltip-content">
-                        <div class="tooltip-row">
-                            <span class="tooltip-label">ID:</span>
-                            <span>${d.id}</span>
+                tooltip.classed('show', true)
+                    .html(`
+                        <div class="tooltip-title">${d.label}</div>
+                        <div class="tooltip-content">
+                            <div class="tooltip-row">
+                                <span class="tooltip-label">ID:</span>
+                                <span>${d.id}</span>
+                            </div>
+                            <div class="tooltip-row">
+                                <span class="tooltip-label">Plugin:</span>
+                                <span>${d.plugin}</span>
+                            </div>
+                            <div class="tooltip-row">
+                                <span class="tooltip-label">Host:</span>
+                                <span>${d.entityId.host}</span>
+                            </div>
                         </div>
-                        <div class="tooltip-row">
-                            <span class="tooltip-label">Plugin:</span>
-                            <span>${d.plugin}</span>
-                        </div>
-                        ${d.entityId.host ? `
-                        <div class="tooltip-row">
-                            <span class="tooltip-label">Host:</span>
-                            <span>${d.entityId.host}</span>
-                        </div>
-                        ` : ''}
-                        <div class="tooltip-row">
-                            <span class="tooltip-label">Plugin ID:</span>
-                            <span>${d.entityId.pluginId}</span>
-                        </div>
-                        <div class="tooltip-row">
-                            <span class="tooltip-label">Steady ID:</span>
-                            <span>${d.entityId.steadyId}</span>
-                        </div>
-                    </div>
-                `)
-                .style('left', (event.pageX + 15) + 'px')
-                .style('top', (event.pageY - 15) + 'px')
-                .classed('show', true);
+                    `)
+                    .style('left', (event.pageX + 10) + 'px')
+                    .style('top', (event.pageY - 10) + 'px');
             }
 
             hideTooltip() {
                 this.tooltip.classed('show', false);
             }
 
-            drag(simulation) {
-                function dragstarted(event) {
-                    if (!event.active) simulation.alphaTarget(0.3).restart();
-                    event.subject.fx = event.subject.x;
-                    event.subject.fy = event.subject.y;
+            drag() {
+                function dragstarted(event, d) {
+                    if (!event.active) this.simulation.alphaTarget(0.3).restart();
+                    d.fx = d.x;
+                    d.fy = d.y;
                 }
 
-                function dragged(event) {
-                    event.subject.fx = event.x;
-                    event.subject.fy = event.y;
+                function dragged(event, d) {
+                    d.fx = event.x;
+                    d.fy = event.y;
                 }
 
-                function dragended(event) {
-                    if (!event.active) simulation.alphaTarget(0);
-                    event.subject.fx = null;
-                    event.subject.fy = null;
+                function dragended(event, d) {
+                    if (!event.active) this.simulation.alphaTarget(0);
+                    d.fx = null;
+                    d.fy = null;
                 }
 
                 return d3.drag()
-                    .on('start', dragstarted)
-                    .on('drag', dragged)
-                    .on('end', dragended);
+                    .on('start', dragstarted.bind(this))
+                    .on('drag', dragged.bind(this))
+                    .on('end', dragended.bind(this));
             }
 
-            handleSearch(event) {
-                const searchTerm = event.target.value.toLowerCase();
-                
+            handleSearch(searchTerm) {
                 if (!this.data) return;
 
-                let matchedNodes = [];
+                searchTerm = searchTerm.toLowerCase().trim();
 
-                this.container.selectAll('.node')
+                const matchedNodes = [];
+
+                // Reset all nodes and links
+                this.g.selectAll('.node')
                     .classed('highlighted', false)
                     .classed('dimmed', false)
                     .each(function(d) {
-                        const matches = d.label.toLowerCase().includes(searchTerm) ||
-                                      d.plugin.toLowerCase().includes(searchTerm) ||
-                                      d.id.toLowerCase().includes(searchTerm);
-                        
-                        if (matches && searchTerm !== '') {
+                        const matches = !searchTerm ||
+                            d.label.toLowerCase().includes(searchTerm) ||
+                            d.id.toLowerCase().includes(searchTerm) ||
+                            d.plugin.toLowerCase().includes(searchTerm);
+
+                        if (matches && searchTerm) {
                             matchedNodes.push(d);
-                            d3.select(this).classed('highlighted', true);
-                        } else if (searchTerm !== '') {
-                            d3.select(this).classed('dimmed', true);
                         }
                     });
 
-                this.container.selectAll('.link')
-                    .style('opacity', function(d) {
-                        if (searchTerm === '') return 0.6;
-                        const sourceMatches = d.source.label.toLowerCase().includes(searchTerm) ||
-                                            d.source.plugin.toLowerCase().includes(searchTerm);
-                        const targetMatches = d.target.label.toLowerCase().includes(searchTerm) ||
-                                            d.target.plugin.toLowerCase().includes(searchTerm);
-                        return sourceMatches || targetMatches ? 0.6 : 0.1;
-                    });
+                if (searchTerm) {
+                    // Highlight matched nodes and dim others
+                    this.g.selectAll('.node')
+                        .classed('highlighted', d => matchedNodes.includes(d))
+                        .classed('dimmed', d => !matchedNodes.includes(d));
 
-                // Center on first matched node if any
-                if (matchedNodes.length > 0 && searchTerm !== '') {
-                    this.centerOnNode(matchedNodes[0]);
+                    // Dim links that don't connect to matched nodes
+                    this.g.selectAll('.link')
+                        .style('opacity', d => {
+                            const sourceMatches = matchedNodes.some(n => n.id === d.source.id);
+                            const targetMatches = matchedNodes.some(n => n.id === d.target.id);
+                            return (sourceMatches || targetMatches) ? 0.6 : 0.1;
+                        });
+
+                    // Center on first matched node
+                    if (matchedNodes.length > 0) {
+                        this.centerOnNode(matchedNodes[0]);
+                    }
                 }
             }
 
             centerOnNode(node) {
-                if (!node || !this.svg) return;
+                if (!node) return;
 
-                const width = this.svg.node().clientWidth;
-                const height = this.svg.node().clientHeight;
+                const width = document.getElementById('visualization').clientWidth;
+                const height = document.getElementById('visualization').clientHeight;
 
-                // Calculate the transform to center the node
-                const scale = 1.5; // Zoom level
+                const scale = 1.5;
                 const x = -node.x * scale + width / 2;
                 const y = -node.y * scale + height / 2;
 
                 this.svg.transition()
                     .duration(750)
-                    .call(
-                        this.zoom.transform,
-                        d3.zoomIdentity.translate(x, y).scale(scale)
-                    );
+                    .call(this.zoom.transform, d3.zoomIdentity.translate(x, y).scale(scale));
             }
 
             toggleJsonPanel() {
                 const panel = document.getElementById('jsonPanel');
                 const isShowing = panel.classList.contains('show');
-                
+
                 if (isShowing) {
                     panel.classList.remove('show');
                 } else {
-                    if (this.rawJsonText || this.data) {
-                        const displayElement = document.getElementById('jsonDisplay');
-                        
-                        // Show loading message for large files
-                        displayElement.textContent = 'Loading JSON data...';
-                        panel.classList.add('show');
-                        
-                        // Use setTimeout to allow UI to update before processing large JSON
+                    panel.classList.add('show');
+                    const displayElement = document.getElementById('jsonDisplay');
+
+                    // Show JSON data
+                    if (this.data) {
                         setTimeout(() => {
                             try {
-                                // Format JSON with indentation
-                                const formatted = JSON.stringify(this.data, null, 2);
-                                
-                                // For very large JSON (>500KB), show a summary instead
-                                if (formatted.length > 500000) {
-                                    const summary = {
-                                        info: "JSON file is very large. Showing summary only.",
-                                        totalSize: `${(formatted.length / 1024 / 1024).toFixed(2)} MB`,
-                                        nodes: {
-                                            count: this.data.nodes.length,
-                                            sample: this.data.nodes.slice(0, 3)
-                                        },
-                                        edges: {
-                                            count: this.data.edges.length,
-                                            sample: this.data.edges.slice(0, 3)
-                                        },
-                                        note: "Full JSON data is loaded in the visualization. To view complete data, use browser dev tools or export the file."
-                                    };
-                                    displayElement.textContent = JSON.stringify(summary, null, 2);
-                                } else {
-                                    displayElement.textContent = formatted;
-                                }
+                                const jsonString = JSON.stringify(this.data, null, 2);
+                                displayElement.textContent = jsonString;
                             } catch (error) {
                                 displayElement.textContent = 'Error displaying JSON: ' + error.message;
                             }
@@ -1091,37 +1121,33 @@
 
             resetView() {
                 if (!this.svg) return;
-                
-                // Clear search
-                document.getElementById('searchInput').value = '';
-                this.container.selectAll('.node')
-                    .classed('highlighted', false)
-                    .classed('dimmed', false);
-                this.container.selectAll('.link')
-                    .style('opacity', 0.6);
-                
-                // Reset zoom and pan
+
+                const width = document.getElementById('visualization').clientWidth;
+                const height = document.getElementById('visualization').clientHeight;
+
                 this.svg.transition()
                     .duration(750)
                     .call(this.zoom.transform, d3.zoomIdentity);
 
-                if (this.simulation) {
-                    this.simulation.alpha(0.3).restart();
-                }
+                // Reset search
+                document.getElementById('searchInput').value = '';
+                this.g.selectAll('.node')
+                    .classed('highlighted', false)
+                    .classed('dimmed', false);
+                this.g.selectAll('.link')
+                    .style('opacity', 0.6);
             }
 
             clear() {
                 this.data = null;
-                this.rawJsonText = null;
-                this.container.selectAll('*').remove();
+                this.g.selectAll('*').remove();
                 d3.select('.legend').remove();
                 document.getElementById('nodeCount').textContent = '0';
                 document.getElementById('edgeCount').textContent = '0';
-                document.getElementById('fileInput').value = '';
                 document.getElementById('searchInput').value = '';
-                document.getElementById('showJsonBtn').style.display = 'none';
-                document.getElementById('jsonPanel').classList.remove('show');
+                document.getElementById('fileInput').value = '';
                 document.getElementById('jsonDisplay').textContent = '';
+                document.getElementById('jsonPanel').classList.remove('show');
             }
 
             showError(message) {
@@ -1130,14 +1156,14 @@
                 errorDiv.className = 'error-message';
                 errorDiv.textContent = message;
                 viz.appendChild(errorDiv);
-                
+
                 setTimeout(() => {
                     errorDiv.remove();
                 }, 5000);
             }
         }
 
-        // Initialize the visualization
+        // Initialize visualization
         const viz = new TopologyVisualization();
     </script>
 </body>
