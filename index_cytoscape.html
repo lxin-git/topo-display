@@ -1,0 +1,1045 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Topology Visualization</title>
+    <script src="https://unpkg.com/cytoscape@3.28.1/dist/cytoscape.min.js"></script>
+    <style>
+        /* Carbon Design System - Design Tokens */
+        :root {
+            /* Colors - IBM Carbon Theme (White/g10) */
+            --cds-background: #ffffff;
+            --cds-layer-01: #f4f4f4;
+            --cds-layer-02: #ffffff;
+            --cds-layer-03: #f4f4f4;
+            --cds-field-01: #f4f4f4;
+            --cds-field-02: #ffffff;
+            --cds-ui-background: #f4f4f4;
+            --cds-interactive: #0f62fe;
+            --cds-interactive-hover: #0353e9;
+            --cds-interactive-active: #002d9c;
+            --cds-text-primary: #161616;
+            --cds-text-secondary: #525252;
+            --cds-text-placeholder: #a8a8a8;
+            --cds-text-on-color: #ffffff;
+            --cds-link-primary: #0f62fe;
+            --cds-link-primary-hover: #0043ce;
+            --cds-border-subtle: #e0e0e0;
+            --cds-border-strong: #8d8d8d;
+            --cds-border-interactive: #0f62fe;
+            --cds-focus: #0f62fe;
+            --cds-support-error: #da1e28;
+            --cds-support-success: #24a148;
+            --cds-support-warning: #f1c21b;
+            --cds-support-info: #0043ce;
+            
+            /* Spacing - Carbon 8px grid */
+            --cds-spacing-01: 0.125rem;
+            --cds-spacing-02: 0.25rem;
+            --cds-spacing-03: 0.5rem;
+            --cds-spacing-04: 0.75rem;
+            --cds-spacing-05: 1rem;
+            --cds-spacing-06: 1.5rem;
+            --cds-spacing-07: 2rem;
+            --cds-spacing-08: 2.5rem;
+            --cds-spacing-09: 3rem;
+            --cds-spacing-10: 4rem;
+            
+            /* Typography */
+            --cds-font-family: 'IBM Plex Sans', 'Helvetica Neue', Arial, sans-serif;
+            --cds-font-family-mono: 'IBM Plex Mono', 'Menlo', 'DejaVu Sans Mono', monospace;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: var(--cds-font-family);
+            background: var(--cds-ui-background);
+            min-height: 100vh;
+            color: var(--cds-text-primary);
+            display: flex;
+            flex-direction: column;
+        }
+
+        .container {
+            max-width: 100%;
+            width: 100%;
+            margin: 0;
+            background: var(--cds-background);
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+        }
+
+        .main-content {
+            display: flex;
+            flex: 1;
+            position: relative;
+            overflow: hidden;
+            min-height: 0;
+        }
+
+        /* JSON Panel */
+        .json-panel {
+            width: 400px;
+            min-width: 250px;
+            max-width: 800px;
+            background: var(--cds-layer-01);
+            border-right: 1px solid var(--cds-border-subtle);
+            display: none;
+            flex-direction: column;
+            overflow: hidden;
+            flex-shrink: 0;
+            position: relative;
+        }
+
+        .json-panel.show {
+            display: flex;
+        }
+
+        .json-panel-header {
+            padding: var(--cds-spacing-05);
+            background: var(--cds-layer-02);
+            border-bottom: 1px solid var(--cds-border-subtle);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-shrink: 0;
+        }
+
+        .json-panel-header h3 {
+            margin: 0;
+            font-size: 0.875rem;
+            font-weight: 600;
+            color: var(--cds-text-primary);
+        }
+
+        .json-panel-close {
+            background: transparent;
+            border: none;
+            color: var(--cds-text-primary);
+            font-size: 1.25rem;
+            cursor: pointer;
+            padding: var(--cds-spacing-02);
+            width: 2rem;
+            height: 2rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: background 110ms;
+        }
+
+        .json-panel-close:hover {
+            background: var(--cds-layer-01);
+        }
+
+        .json-panel-close:focus {
+            outline: 2px solid var(--cds-focus);
+            outline-offset: -2px;
+        }
+
+        .json-panel-content {
+            flex: 1;
+            overflow: auto;
+            padding: var(--cds-spacing-05);
+            min-height: 0;
+        }
+
+        .json-display {
+            background: var(--cds-layer-02);
+            color: var(--cds-text-primary);
+            padding: var(--cds-spacing-05);
+            border: 1px solid var(--cds-border-subtle);
+            font-family: var(--cds-font-family-mono);
+            font-size: 0.75rem;
+            line-height: 1.5;
+            overflow-x: auto;
+            white-space: pre;
+            word-wrap: break-word;
+            min-width: 0;
+        }
+
+        .resize-handle {
+            position: absolute;
+            right: 0;
+            top: 0;
+            bottom: 0;
+            width: 4px;
+            cursor: ew-resize;
+            background: transparent;
+            z-index: 10;
+        }
+
+        .resize-handle:hover,
+        .resize-handle.resizing {
+            background: var(--cds-border-interactive);
+        }
+
+        .visualization-container {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            min-width: 0;
+        }
+
+        /* Header */
+        .header {
+            background: var(--cds-layer-02);
+            border-bottom: 1px solid var(--cds-border-subtle);
+            padding: var(--cds-spacing-07) var(--cds-spacing-06);
+        }
+
+        .header h1 {
+            font-size: 2rem;
+            font-weight: 400;
+            margin-bottom: var(--cds-spacing-03);
+            color: var(--cds-text-primary);
+        }
+
+        .header p {
+            font-size: 0.875rem;
+            color: var(--cds-text-secondary);
+        }
+
+        /* Controls */
+        .controls {
+            padding: var(--cds-spacing-05) var(--cds-spacing-06);
+            background: var(--cds-layer-01);
+            border-bottom: 1px solid var(--cds-border-subtle);
+            display: flex;
+            gap: var(--cds-spacing-05);
+            flex-wrap: wrap;
+            align-items: center;
+        }
+
+        /* File Input */
+        .file-input-wrapper {
+            position: relative;
+            overflow: hidden;
+            display: inline-block;
+        }
+
+        .file-input-wrapper input[type=file] {
+            position: absolute;
+            left: -9999px;
+        }
+
+        .file-input-label {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            padding: 0 var(--cds-spacing-05);
+            height: 3rem;
+            background: var(--cds-interactive);
+            color: var(--cds-text-on-color);
+            border: none;
+            cursor: pointer;
+            font-size: 0.875rem;
+            font-weight: 400;
+            transition: background 110ms;
+            outline: 2px solid transparent;
+            outline-offset: -2px;
+        }
+
+        .file-input-label:hover {
+            background: var(--cds-interactive-hover);
+        }
+
+        .file-input-label:focus {
+            outline: 2px solid var(--cds-focus);
+            outline-offset: -2px;
+        }
+
+        /* Buttons - Carbon Style */
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            padding: 0 var(--cds-spacing-05);
+            height: 3rem;
+            border: none;
+            cursor: pointer;
+            font-size: 0.875rem;
+            font-weight: 400;
+            transition: background 110ms;
+            outline: 2px solid transparent;
+            outline-offset: -2px;
+            font-family: var(--cds-font-family);
+        }
+
+        .btn-primary {
+            background: var(--cds-interactive);
+            color: var(--cds-text-on-color);
+        }
+
+        .btn-primary:hover {
+            background: var(--cds-interactive-hover);
+        }
+
+        .btn-primary:focus {
+            outline: 2px solid var(--cds-focus);
+            outline-offset: -2px;
+        }
+
+        .btn-secondary {
+            background: transparent;
+            color: var(--cds-text-primary);
+            border: 1px solid var(--cds-interactive);
+        }
+
+        .btn-secondary:hover {
+            background: var(--cds-interactive-hover);
+            color: var(--cds-text-on-color);
+        }
+
+        .btn-secondary:focus {
+            outline: 2px solid var(--cds-focus);
+            outline-offset: -2px;
+        }
+
+        /* Layout Selector */
+        .layout-selector {
+            display: flex;
+            align-items: center;
+            gap: var(--cds-spacing-03);
+        }
+
+        .layout-selector label {
+            font-size: 0.875rem;
+            color: var(--cds-text-secondary);
+            white-space: nowrap;
+        }
+
+        .layout-select {
+            padding: 0 var(--cds-spacing-05);
+            height: 3rem;
+            border: none;
+            border-bottom: 1px solid var(--cds-border-strong);
+            background: var(--cds-field-01);
+            font-size: 0.875rem;
+            font-family: var(--cds-font-family);
+            color: var(--cds-text-primary);
+            cursor: pointer;
+            transition: all 110ms;
+            outline: 2px solid transparent;
+            outline-offset: -2px;
+            min-width: 150px;
+        }
+
+        .layout-select:hover {
+            background: var(--cds-field-02);
+        }
+
+        .layout-select:focus {
+            outline: 2px solid var(--cds-focus);
+            outline-offset: -2px;
+        }
+
+        /* Stats */
+        .stats {
+            display: flex;
+            gap: var(--cds-spacing-06);
+            margin-left: auto;
+            flex-wrap: wrap;
+        }
+
+        .stat-item {
+            background: var(--cds-layer-02);
+            padding: var(--cds-spacing-04) var(--cds-spacing-05);
+            border: 1px solid var(--cds-border-subtle);
+        }
+
+        .stat-label {
+            font-size: 0.75rem;
+            color: var(--cds-text-secondary);
+            margin-bottom: var(--cds-spacing-02);
+            text-transform: uppercase;
+            letter-spacing: 0.32px;
+        }
+
+        .stat-value {
+            font-size: 1.25rem;
+            font-weight: 600;
+            color: var(--cds-text-primary);
+        }
+
+        /* Visualization */
+        #cy {
+            flex: 1;
+            background: var(--cds-background);
+            position: relative;
+            min-height: 500px;
+        }
+
+        /* Search Box */
+        .search-box {
+            flex: 1;
+            min-width: 250px;
+            max-width: 400px;
+        }
+
+        .search-box input {
+            width: 100%;
+            padding: 0 var(--cds-spacing-05);
+            height: 3rem;
+            border: none;
+            border-bottom: 1px solid var(--cds-border-strong);
+            background: var(--cds-field-01);
+            font-size: 0.875rem;
+            font-family: var(--cds-font-family);
+            color: var(--cds-text-primary);
+            transition: all 110ms;
+            outline: 2px solid transparent;
+            outline-offset: -2px;
+        }
+
+        .search-box input::placeholder {
+            color: var(--cds-text-placeholder);
+        }
+
+        .search-box input:focus {
+            outline: 2px solid var(--cds-focus);
+            outline-offset: -2px;
+        }
+
+        /* Loading */
+        .loading {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            text-align: center;
+            color: var(--cds-text-primary);
+            z-index: 1000;
+        }
+
+        .loading-spinner {
+            border: 3px solid var(--cds-border-subtle);
+            border-top: 3px solid var(--cds-interactive);
+            border-radius: 50%;
+            width: 48px;
+            height: 48px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto var(--cds-spacing-05);
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        /* Error Message */
+        .error-message {
+            background: var(--cds-support-error);
+            color: var(--cds-text-on-color);
+            padding: var(--cds-spacing-05);
+            margin: var(--cds-spacing-05);
+            border-left: 3px solid #750e13;
+        }
+
+        /* Legend */
+        .legend {
+            position: absolute;
+            top: var(--cds-spacing-05);
+            right: var(--cds-spacing-05);
+            background: var(--cds-layer-02);
+            border: 1px solid var(--cds-border-subtle);
+            max-width: 250px;
+            z-index: 100;
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+        }
+
+        .legend-header {
+            padding: var(--cds-spacing-04) var(--cds-spacing-05);
+            background: var(--cds-layer-01);
+            border-bottom: 1px solid var(--cds-border-subtle);
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            user-select: none;
+        }
+
+        .legend-header:hover {
+            background: var(--cds-layer-03);
+        }
+
+        .legend-title {
+            font-weight: 600;
+            font-size: 0.875rem;
+            margin: 0;
+            color: var(--cds-text-primary);
+        }
+
+        .legend-toggle {
+            font-size: 1rem;
+            transition: transform 110ms;
+            color: var(--cds-text-primary);
+        }
+
+        .legend-toggle.collapsed {
+            transform: rotate(-90deg);
+        }
+
+        .legend-content {
+            max-height: 400px;
+            overflow-y: auto;
+            padding: var(--cds-spacing-05);
+            display: none;
+        }
+
+        .legend-content.show {
+            display: block;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            margin: var(--cds-spacing-03) 0;
+            font-size: 0.75rem;
+        }
+
+        .legend-color {
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            margin-right: var(--cds-spacing-03);
+            border: 1px solid var(--cds-border-subtle);
+            flex-shrink: 0;
+        }
+
+        .legend-label {
+            word-break: break-word;
+            color: var(--cds-text-primary);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>Topology Grapher</h1>
+            <p>Interactive topology viewer powered by Cytoscape.js</p>
+        </div>
+
+        <div class="controls">
+            <div class="file-input-wrapper">
+                <input type="file" id="fileInput" accept=".json">
+                <label for="fileInput" class="file-input-label">
+                    Load JSON File
+                </label>
+            </div>
+
+            <div class="search-box">
+                <input type="text" id="searchInput" placeholder="Search nodes...">
+            </div>
+
+            <div class="layout-selector">
+                <label for="layoutSelect">Layout:</label>
+                <select id="layoutSelect" class="layout-select">
+                    <option value="cose">Force-Directed (COSE)</option>
+                    <option value="breadthfirst">Hierarchical</option>
+                    <option value="circle">Circular</option>
+                    <option value="grid">Grid</option>
+                    <option value="concentric">Concentric</option>
+                    <option value="cose-bilkent">COSE Bilkent (Better)</option>
+                </select>
+            </div>
+
+            <button id="showJsonBtn" class="btn btn-primary">Show JSON Data</button>
+            <button id="resetBtn" class="btn btn-primary">Reset View</button>
+            <button id="clearBtn" class="btn btn-secondary">Clear</button>
+
+            <div class="stats">
+                <div class="stat-item">
+                    <div class="stat-label">Nodes</div>
+                    <div id="nodeCount" class="stat-value">0</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-label">Edges</div>
+                    <div id="edgeCount" class="stat-value">0</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="main-content">
+            <div id="jsonPanel" class="json-panel">
+                <div class="json-panel-header">
+                    <h3>JSON Data</h3>
+                    <button id="closeJsonBtn" class="json-panel-close">×</button>
+                </div>
+                <div class="json-panel-content">
+                    <div id="jsonDisplay" class="json-display"></div>
+                </div>
+                <div id="resizeHandle" class="resize-handle"></div>
+            </div>
+
+            <div class="visualization-container">
+                <div id="cy">
+                    <div id="loading" class="loading" style="display: none;">
+                        <div class="loading-spinner"></div>
+                        <div>Loading topology data...</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        class TopologyVisualization {
+            constructor() {
+                this.data = null;
+                this.cy = null;
+                this.currentLayout = 'cose';
+                this.colorMap = new Map();
+                this.colors = [
+                    '#0f62fe', '#24a148', '#da1e28', '#f1c21b', '#8a3ffc',
+                    '#33b1ff', '#007d79', '#ff7eb6', '#fa4d56', '#d12771'
+                ];
+                this.init();
+            }
+
+            init() {
+                this.setupEventListeners();
+                this.setupResizeHandle();
+                this.initCytoscape();
+            }
+
+            initCytoscape() {
+                this.cy = cytoscape({
+                    container: document.getElementById('cy'),
+                    style: [
+                        {
+                            selector: 'node',
+                            style: {
+                                'background-color': 'data(color)',
+                                'label': 'data(label)',
+                                'font-size': '12px',
+                                'text-valign': 'center',
+                                'text-halign': 'right',
+                                'text-margin-x': '5px',
+                                'color': '#161616',
+                                'text-outline-color': '#ffffff',
+                                'text-outline-width': 2,
+                                'width': 30,
+                                'height': 30
+                            }
+                        },
+                        {
+                            selector: 'edge',
+                            style: {
+                                'width': 2,
+                                'line-color': '#8d8d8d',
+                                'target-arrow-color': '#8d8d8d',
+                                'target-arrow-shape': 'triangle',
+                                'curve-style': 'bezier',
+                                'label': 'data(relation)',
+                                'font-size': '10px',
+                                'text-rotation': 'autorotate',
+                                'text-margin-y': -10,
+                                'color': '#525252'
+                            }
+                        },
+                        {
+                            selector: 'node:selected',
+                            style: {
+                                'border-width': 3,
+                                'border-color': '#0f62fe'
+                            }
+                        },
+                        {
+                            selector: 'edge:selected',
+                            style: {
+                                'line-color': '#0f62fe',
+                                'target-arrow-color': '#0f62fe',
+                                'width': 3
+                            }
+                        },
+                        {
+                            selector: '.highlighted',
+                            style: {
+                                'border-width': 3,
+                                'border-color': '#da1e28',
+                                'z-index': 999
+                            }
+                        },
+                        {
+                            selector: '.dimmed',
+                            style: {
+                                'opacity': 0.2
+                            }
+                        }
+                    ],
+                    wheelSensitivity: 0.2
+                });
+
+                // Add tooltip on hover
+                this.cy.on('mouseover', 'node', (evt) => {
+                    const node = evt.target;
+                    const data = node.data();
+                    node.qtip({
+                        content: `
+                            <div style="font-family: 'IBM Plex Sans', sans-serif; padding: 8px;">
+                                <div style="font-weight: 600; margin-bottom: 8px; font-size: 14px;">${data.label}</div>
+                                <div style="font-size: 12px; line-height: 1.6;">
+                                    <div><span style="color: #525252;">ID:</span> ${data.id}</div>
+                                    <div><span style="color: #525252;">Plugin:</span> ${data.plugin}</div>
+                                    <div><span style="color: #525252;">Host:</span> ${data.entityId.host}</div>
+                                </div>
+                            </div>
+                        `,
+                        position: {
+                            my: 'bottom center',
+                            at: 'top center'
+                        },
+                        style: {
+                            classes: 'qtip-light qtip-rounded',
+                            tip: {
+                                width: 10,
+                                height: 5
+                            }
+                        }
+                    });
+                });
+            }
+
+            setupResizeHandle() {
+                const handle = document.getElementById('resizeHandle');
+                const panel = document.getElementById('jsonPanel');
+                let isResizing = false;
+
+                handle.addEventListener('mousedown', (e) => {
+                    isResizing = true;
+                    handle.classList.add('resizing');
+                    e.preventDefault();
+                });
+
+                document.addEventListener('mousemove', (e) => {
+                    if (!isResizing) return;
+
+                    const containerRect = document.querySelector('.main-content').getBoundingClientRect();
+                    const newWidth = e.clientX - containerRect.left;
+
+                    const minWidth = 250;
+                    const maxWidth = 800;
+                    const constrainedWidth = Math.max(minWidth, Math.min(maxWidth, newWidth));
+
+                    panel.style.width = `${constrainedWidth}px`;
+                });
+
+                document.addEventListener('mouseup', () => {
+                    if (isResizing) {
+                        isResizing = false;
+                        handle.classList.remove('resizing');
+                        if (this.cy) {
+                            this.cy.resize();
+                        }
+                    }
+                });
+            }
+
+            setupEventListeners() {
+                document.getElementById('fileInput').addEventListener('change', (e) => this.handleFileUpload(e));
+                document.getElementById('showJsonBtn').addEventListener('click', () => this.toggleJsonPanel());
+                document.getElementById('resetBtn').addEventListener('click', () => this.resetView());
+                document.getElementById('searchInput').addEventListener('input', (e) => this.handleSearch(e.target.value));
+                document.getElementById('closeJsonBtn').addEventListener('click', () => this.toggleJsonPanel());
+                document.getElementById('clearBtn').addEventListener('click', () => this.clear());
+                document.getElementById('layoutSelect').addEventListener('change', (e) => this.changeLayout(e.target.value));
+            }
+
+            async handleFileUpload(event) {
+                const file = event.target.files[0];
+                if (!file) return;
+
+                document.getElementById('loading').style.display = 'block';
+
+                try {
+                    const text = await file.text();
+                    const data = JSON.parse(text);
+
+                    if (!data.nodes || !data.edges) {
+                        throw new Error('Invalid JSON format. Expected "nodes" and "edges" arrays.');
+                    }
+
+                    this.processData(data);
+                    this.render();
+                    document.getElementById('loading').style.display = 'none';
+
+                } catch (error) {
+                    document.getElementById('loading').style.display = 'none';
+                    this.showError(`Error loading file: ${error.message}`);
+                    console.error('Error:', error);
+                }
+            }
+
+            processData(data) {
+                this.data = data;
+
+                // Create a Set of valid node IDs
+                const validNodeIds = new Set(data.nodes.map(node => node.id));
+
+                // Filter out edges that reference non-existent nodes
+                const originalEdgeCount = data.edges.length;
+
+                this.data.edges = data.edges.filter(edge => {
+                    const sourceValid = validNodeIds.has(edge.source);
+                    const destValid = validNodeIds.has(edge.destination);
+
+                    if (!sourceValid || !destValid) {
+                        console.warn('Filtered out invalid edge:', edge);
+                        return false;
+                    }
+                    return true;
+                });
+
+                const filteredEdgeCount = this.data.edges.length;
+                if (filteredEdgeCount < originalEdgeCount) {
+                    console.log(`Filtered ${originalEdgeCount - filteredEdgeCount} invalid edges`);
+                }
+
+                // Update stats
+                document.getElementById('nodeCount').textContent = data.nodes.length;
+                document.getElementById('edgeCount').textContent = filteredEdgeCount;
+
+                // Assign colors to plugins
+                const plugins = [...new Set(data.nodes.map(n => n.plugin))];
+                plugins.forEach((plugin, i) => {
+                    this.colorMap.set(plugin, this.colors[i % this.colors.length]);
+                });
+
+                this.createLegend(plugins);
+            }
+
+            render() {
+                if (!this.cy || !this.data) return;
+
+                // Clear existing elements
+                this.cy.elements().remove();
+
+                // Add nodes
+                const nodes = this.data.nodes.map(node => ({
+                    data: {
+                        id: node.id,
+                        label: node.label,
+                        plugin: node.plugin,
+                        entityId: node.entityId,
+                        color: this.colorMap.get(node.plugin)
+                    }
+                }));
+
+                // Add edges
+                const edges = this.data.edges.map(edge => ({
+                    data: {
+                        source: edge.source,
+                        target: edge.destination,
+                        relation: edge.relation
+                    }
+                }));
+
+                this.cy.add(nodes);
+                this.cy.add(edges);
+
+                // Apply layout
+                this.applyLayout();
+            }
+
+            applyLayout() {
+                const layoutOptions = {
+                    name: this.currentLayout,
+                    animate: true,
+                    animationDuration: 500,
+                    fit: true,
+                    padding: 50
+                };
+
+                // Add specific options for different layouts
+                if (this.currentLayout === 'cose') {
+                    layoutOptions.nodeRepulsion = 8000;
+                    layoutOptions.idealEdgeLength = 100;
+                    layoutOptions.edgeElasticity = 100;
+                    layoutOptions.nestingFactor = 1.2;
+                    layoutOptions.gravity = 1;
+                } else if (this.currentLayout === 'breadthfirst') {
+                    layoutOptions.directed = true;
+                    layoutOptions.spacingFactor = 1.5;
+                } else if (this.currentLayout === 'concentric') {
+                    layoutOptions.minNodeSpacing = 100;
+                }
+
+                const layout = this.cy.layout(layoutOptions);
+                layout.run();
+            }
+
+            changeLayout(layout) {
+                this.currentLayout = layout;
+                if (this.data) {
+                    this.applyLayout();
+                }
+            }
+
+            handleSearch(searchTerm) {
+                if (!this.cy) return;
+
+                searchTerm = searchTerm.toLowerCase().trim();
+
+                // Remove previous highlights
+                this.cy.elements().removeClass('highlighted dimmed');
+
+                if (!searchTerm) return;
+
+                // Find matching nodes
+                const matchedNodes = this.cy.nodes().filter(node => {
+                    const data = node.data();
+                    return data.label.toLowerCase().includes(searchTerm) ||
+                           data.id.toLowerCase().includes(searchTerm) ||
+                           data.plugin.toLowerCase().includes(searchTerm);
+                });
+
+                if (matchedNodes.length > 0) {
+                    // Highlight matched nodes
+                    matchedNodes.addClass('highlighted');
+                    
+                    // Dim non-matched elements
+                    this.cy.elements().not(matchedNodes).addClass('dimmed');
+                    
+                    // Also highlight connected edges
+                    matchedNodes.connectedEdges().removeClass('dimmed');
+
+                    // Center on first matched node
+                    this.cy.animate({
+                        fit: {
+                            eles: matchedNodes.first(),
+                            padding: 100
+                        },
+                        duration: 500
+                    });
+                }
+            }
+
+            createLegend(plugins) {
+                // Remove existing legend
+                const existingLegend = document.querySelector('.legend');
+                if (existingLegend) {
+                    existingLegend.remove();
+                }
+
+                const legend = document.createElement('div');
+                legend.className = 'legend';
+
+                const header = document.createElement('div');
+                header.className = 'legend-header';
+                header.innerHTML = `
+                    <div class="legend-title">Plugin Types</div>
+                    <div class="legend-toggle">▼</div>
+                `;
+
+                const content = document.createElement('div');
+                content.className = 'legend-content show';
+
+                plugins.forEach(plugin => {
+                    const item = document.createElement('div');
+                    item.className = 'legend-item';
+                    item.innerHTML = `
+                        <div class="legend-color" style="background-color: ${this.colorMap.get(plugin)}"></div>
+                        <div class="legend-label">${plugin}</div>
+                    `;
+                    content.appendChild(item);
+                });
+
+                header.addEventListener('click', () => {
+                    const toggle = header.querySelector('.legend-toggle');
+                    const isShowing = content.classList.contains('show');
+                    content.classList.toggle('show');
+                    toggle.classList.toggle('collapsed', isShowing);
+                });
+
+                legend.appendChild(header);
+                legend.appendChild(content);
+                document.getElementById('cy').appendChild(legend);
+            }
+
+            toggleJsonPanel() {
+                const panel = document.getElementById('jsonPanel');
+                const isShowing = panel.classList.contains('show');
+
+                if (isShowing) {
+                    panel.classList.remove('show');
+                    if (this.cy) {
+                        this.cy.resize();
+                    }
+                } else {
+                    panel.classList.add('show');
+                    const displayElement = document.getElementById('jsonDisplay');
+
+                    if (this.data) {
+                        setTimeout(() => {
+                            try {
+                                const jsonString = JSON.stringify(this.data, null, 2);
+                                displayElement.textContent = jsonString;
+                            } catch (error) {
+                                displayElement.textContent = 'Error displaying JSON: ' + error.message;
+                            }
+                        }, 100);
+                    }
+
+                    if (this.cy) {
+                        setTimeout(() => this.cy.resize(), 300);
+                    }
+                }
+            }
+
+            resetView() {
+                if (!this.cy) return;
+
+                // Reset search
+                document.getElementById('searchInput').value = '';
+                this.cy.elements().removeClass('highlighted dimmed');
+
+                // Fit to viewport
+                this.cy.fit(null, 50);
+            }
+
+            clear() {
+                this.data = null;
+                if (this.cy) {
+                    this.cy.elements().remove();
+                }
+                
+                const legend = document.querySelector('.legend');
+                if (legend) legend.remove();
+                
+                document.getElementById('nodeCount').textContent = '0';
+                document.getElementById('edgeCount').textContent = '0';
+                document.getElementById('searchInput').value = '';
+                document.getElementById('fileInput').value = '';
+                document.getElementById('jsonDisplay').textContent = '';
+                document.getElementById('jsonPanel').classList.remove('show');
+                
+                if (this.cy) {
+                    this.cy.resize();
+                }
+            }
+
+            showError(message) {
+                const cy = document.getElementById('cy');
+                const errorDiv = document.createElement('div');
+                errorDiv.className = 'error-message';
+                errorDiv.textContent = message;
+                cy.appendChild(errorDiv);
+
+                setTimeout(() => {
+                    errorDiv.remove();
+                }, 5000);
+            }
+        }
+
+        // Initialize visualization
+        const viz = new TopologyVisualization();
+    </script>
+</body>
+</html>

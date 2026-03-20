@@ -368,11 +368,6 @@
             font-family: var(--cds-font-family);
             pointer-events: none;
             fill: var(--cds-text-primary);
-            display: none; /* Hide labels by default */
-        }
-
-        .node.highlighted text {
-            display: block; /* Show labels only for highlighted nodes */
         }
 
         .link {
@@ -387,7 +382,6 @@
             fill: var(--cds-text-secondary);
             pointer-events: none;
             font-family: var(--cds-font-family);
-            display: none; /* Hide relationship labels */
         }
 
         /* Tooltip - Carbon Style */
@@ -680,6 +674,8 @@
                     <option value="force">Force-Directed</option>
                     <option value="hierarchical">Hierarchical</option>
                     <option value="radial">Radial</option>
+                    <option value="grid">Grid</option>
+                    <option value="circular">Circular</option>
                 </select>
             </div>
 
@@ -913,21 +909,12 @@
                 const width = document.getElementById('visualization').clientWidth;
                 const height = document.getElementById('visualization').clientHeight;
 
-                // Create a node map for quick lookup
-                const nodeMap = new Map(this.data.nodes.map(n => [n.id, n]));
-
-                // Convert edges to D3 format, ensuring we use fresh references
-                const links = this.data.edges.map(edge => {
-                    // Get the actual source/target IDs (handle both string and object cases)
-                    const sourceId = typeof edge.source === 'object' ? edge.source.id : edge.source;
-                    const targetId = typeof edge.destination === 'object' ? edge.destination.id : edge.destination;
-                    
-                    return {
-                        source: sourceId,
-                        target: targetId,
-                        relation: edge.relation
-                    };
-                });
+                // Convert edges to D3 format (destination -> target)
+                const links = this.data.edges.map(edge => ({
+                    source: edge.source,
+                    target: edge.destination,
+                    relation: edge.relation
+                }));
 
                 // Apply layout-specific positioning
                 this.applyLayout(this.data.nodes, links, width, height);
@@ -982,11 +969,30 @@
                 node.on('mouseover', (event, d) => this.showTooltip(event, d))
                     .on('mouseout', () => this.hideTooltip());
 
-                // Setup tick function for updating positions
-                const updatePositions = () => {
-                    // Use straight lines instead of arcs
+                // Update positions based on layout type
+                if (this.currentLayout === 'force') {
+                    // For force layout, use simulation tick
+                    this.simulation.on('tick', () => {
+                        link.attr('d', d => {
+                            const dx = d.target.x - d.source.x;
+                            const dy = d.target.y - d.source.y;
+                            const dr = Math.sqrt(dx * dx + dy * dy);
+                            return `M${d.source.x},${d.source.y}A${dr},${dr} 0 0,1 ${d.target.x},${d.target.y}`;
+                        });
+
+                        linkLabel
+                            .attr('x', d => (d.source.x + d.target.x) / 2)
+                            .attr('y', d => (d.source.y + d.target.y) / 2);
+
+                        node.attr('transform', d => `translate(${d.x},${d.y})`);
+                    });
+                } else {
+                    // For static layouts, position immediately
                     link.attr('d', d => {
-                        return `M${d.source.x},${d.source.y}L${d.target.x},${d.target.y}`;
+                        const dx = d.target.x - d.source.x;
+                        const dy = d.target.y - d.source.y;
+                        const dr = Math.sqrt(dx * dx + dy * dy);
+                        return `M${d.source.x},${d.source.y}A${dr},${dr} 0 0,1 ${d.target.x},${d.target.y}`;
                     });
 
                     linkLabel
@@ -994,18 +1000,6 @@
                         .attr('y', d => (d.source.y + d.target.y) / 2);
 
                     node.attr('transform', d => `translate(${d.x},${d.y})`);
-                };
-
-                // Update positions based on layout type
-                if (this.currentLayout === 'force') {
-                    // For force layout, use simulation tick
-                    this.simulation.on('tick', updatePositions);
-                } else {
-                    // For static layouts, update once and stop simulation
-                    // But keep simulation running at alpha=0 to enable dragging
-                    this.simulation.on('tick', updatePositions);
-                    this.simulation.alpha(0).restart();
-                    updatePositions(); // Initial position update
                 }
             }
 
@@ -1019,6 +1013,12 @@
                         break;
                     case 'radial':
                         this.applyRadialLayout(nodes, links, width, height);
+                        break;
+                    case 'grid':
+                        this.applyGridLayout(nodes, width, height);
+                        break;
+                    case 'circular':
+                        this.applyCircularLayout(nodes, width, height);
                         break;
                 }
             }
@@ -1075,35 +1075,20 @@
                 const levelHeight = height / (maxLevel + 2);
 
                 levelGroups.forEach((levelNodes, level) => {
-                    // Improve spacing for better visibility
                     const levelWidth = width / (levelNodes.length + 1);
-                    const minSpacing = 80; // Minimum spacing between nodes
-                    const actualWidth = Math.max(levelWidth, minSpacing);
-                    const startX = (width - (levelNodes.length - 1) * actualWidth) / 2;
-                    
                     levelNodes.forEach((node, i) => {
-                        node.x = startX + actualWidth * i;
+                        node.x = levelWidth * (i + 1);
                         node.y = levelHeight * (level + 1);
-                        // Don't set fx/fy to allow dragging
+                        node.fx = node.x;
+                        node.fy = node.y;
                     });
                 });
-
-                // Create a minimal simulation for dragging support
-                this.simulation = d3.forceSimulation(nodes)
-                    .force('link', d3.forceLink(links).id(d => d.id).distance(100))
-                    .alphaTarget(0)
-                    .stop();
             }
 
             applyRadialLayout(nodes, links, width, height) {
                 const centerX = width / 2;
                 const centerY = height / 2;
-                
-                // Adjust radius calculation for better spacing
-                // To increase radius: change the multiplier (currently 2.5)
-                // Larger values = bigger circle, more spread out nodes
-                // Example: 3.0 for even more spacing, 2.0 for less spacing
-                const maxRadius = Math.min(width, height) * 2.5 - 50;
+                const maxRadius = Math.min(width, height) / 2 - 50;
 
                 // Build adjacency for finding center node
                 const connections = new Map();
@@ -1129,6 +1114,8 @@
                 // Position center node
                 centerNode.x = centerX;
                 centerNode.y = centerY;
+                centerNode.fx = centerX;
+                centerNode.fy = centerY;
 
                 // Position other nodes in circles
                 const otherNodes = nodes.filter(n => n.id !== centerNode.id);
@@ -1136,20 +1123,44 @@
                 
                 otherNodes.forEach((node, i) => {
                     const angle = i * angleStep;
-                    // Radius multiplier: adjust this value to control node spread
-                    // 0.8 = 80% of maxRadius, increase to 0.9 or 1.0 for more spread
-                    const radius = maxRadius * 0.9;
+                    const radius = maxRadius * 0.8;
                     node.x = centerX + radius * Math.cos(angle);
                     node.y = centerY + radius * Math.sin(angle);
+                    node.fx = node.x;
+                    node.fy = node.y;
                 });
-
-                // Create a minimal simulation for dragging support
-                this.simulation = d3.forceSimulation(nodes)
-                    .force('link', d3.forceLink(links).id(d => d.id).distance(100))
-                    .alphaTarget(0)
-                    .stop();
             }
 
+            applyGridLayout(nodes, width, height) {
+                const cols = Math.ceil(Math.sqrt(nodes.length));
+                const rows = Math.ceil(nodes.length / cols);
+                const cellWidth = width / (cols + 1);
+                const cellHeight = height / (rows + 1);
+
+                nodes.forEach((node, i) => {
+                    const col = i % cols;
+                    const row = Math.floor(i / cols);
+                    node.x = cellWidth * (col + 1);
+                    node.y = cellHeight * (row + 1);
+                    node.fx = node.x;
+                    node.fy = node.y;
+                });
+            }
+
+            applyCircularLayout(nodes, width, height) {
+                const centerX = width / 2;
+                const centerY = height / 2;
+                const radius = Math.min(width, height) / 2 - 50;
+                const angleStep = (2 * Math.PI) / nodes.length;
+
+                nodes.forEach((node, i) => {
+                    const angle = i * angleStep;
+                    node.x = centerX + radius * Math.cos(angle);
+                    node.y = centerY + radius * Math.sin(angle);
+                    node.fx = node.x;
+                    node.fy = node.y;
+                });
+            }
 
             changeLayout(layout) {
                 this.currentLayout = layout;
@@ -1158,13 +1169,6 @@
                     if (this.simulation) {
                         this.simulation.stop();
                     }
-                    
-                    // Clear fixed positions to allow dragging
-                    this.data.nodes.forEach(node => {
-                        delete node.fx;
-                        delete node.fy;
-                    });
-                    
                     // Re-render with new layout
                     this.render();
                 }
