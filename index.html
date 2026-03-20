@@ -359,6 +359,12 @@
             filter: drop-shadow(0 0 6px var(--cds-support-error));
         }
 
+        .node.selected circle {
+            stroke: var(--cds-support-success);
+            stroke-width: 4px;
+            filter: drop-shadow(0 0 8px var(--cds-support-success));
+        }
+
         .node.dimmed {
             opacity: 0.2;
         }
@@ -898,7 +904,7 @@
                 document.getElementById('edgeCount').textContent = filteredEdgeCount;
 
                 // Create color scale based on plugin types
-                const plugins = [...new Set(data.nodes.map(n => n.plugin))];
+                const plugins = [...new Set(data.nodes.map(n => n.plugin))].sort();
                 this.colorScale = d3.scaleOrdinal()
                     .domain(plugins)
                     .range(d3.schemeCategory10);
@@ -980,7 +986,8 @@
                     .text(d => d.label);
 
                 node.on('mouseover', (event, d) => this.showTooltip(event, d))
-                    .on('mouseout', () => this.hideTooltip());
+                    .on('mouseout', () => this.hideTooltip())
+                    .on('click', (event, d) => this.handleNodeClick(event, d));
 
                 // Setup tick function for updating positions
                 const updatePositions = () => {
@@ -1203,7 +1210,9 @@
 
                 plugins.forEach(plugin => {
                     const item = content.append('div')
-                        .attr('class', 'legend-item');
+                        .attr('class', 'legend-item')
+                        .style('cursor', 'pointer')
+                        .on('click', () => this.handleLegendClick(plugin));
 
                     item.append('div')
                         .attr('class', 'legend-color')
@@ -1308,6 +1317,110 @@
                         this.centerOnNode(matchedNodes[0]);
                     }
                 }
+            }
+
+            handleLegendClick(plugin) {
+                if (!this.data) return;
+
+                // Find all nodes with this plugin type
+                const matchedNodes = this.data.nodes.filter(n => n.plugin === plugin);
+
+                // Reset all nodes and links
+                this.g.selectAll('.node')
+                    .classed('highlighted', false)
+                    .classed('selected', false)
+                    .classed('dimmed', false);
+
+                this.g.selectAll('.link')
+                    .style('opacity', 0.6);
+
+                // Highlight matched nodes
+                this.g.selectAll('.node')
+                    .classed('highlighted', d => matchedNodes.some(n => n.id === d.id))
+                    .classed('dimmed', d => !matchedNodes.some(n => n.id === d.id));
+
+                // Dim links that don't connect to matched nodes
+                this.g.selectAll('.link')
+                    .style('opacity', d => {
+                        const sourceMatches = matchedNodes.some(n => n.id === d.source.id);
+                        const targetMatches = matchedNodes.some(n => n.id === d.target.id);
+                        return (sourceMatches || targetMatches) ? 0.6 : 0.1;
+                    });
+
+                // Center on first matched node
+                if (matchedNodes.length > 0) {
+                    this.centerOnNode(matchedNodes[0]);
+                }
+            }
+
+            handleNodeClick(event, clickedNode) {
+                if (!this.data) return;
+
+                event.stopPropagation();
+
+                // Build adjacency map
+                const adjacencyMap = new Map();
+                this.data.nodes.forEach(n => adjacencyMap.set(n.id, []));
+
+                this.data.edges.forEach(edge => {
+                    const sourceId = typeof edge.source === 'object' ? edge.source.id : edge.source;
+                    const targetId = typeof edge.destination === 'object' ? edge.destination.id : edge.destination;
+                    
+                    if (adjacencyMap.has(sourceId)) {
+                        adjacencyMap.get(sourceId).push(targetId);
+                    }
+                    if (adjacencyMap.has(targetId)) {
+                        adjacencyMap.get(targetId).push(sourceId);
+                    }
+                });
+
+                // Find nodes within 3 layers
+                const relatedNodes = new Set([clickedNode.id]);
+                const toProcess = [{ id: clickedNode.id, layer: 0 }];
+                const processed = new Set();
+
+                while (toProcess.length > 0) {
+                    const { id, layer } = toProcess.shift();
+                    
+                    if (processed.has(id) || layer >= 3) continue;
+                    processed.add(id);
+
+                    const neighbors = adjacencyMap.get(id) || [];
+                    neighbors.forEach(neighborId => {
+                        relatedNodes.add(neighborId);
+                        if (layer + 1 < 3) {
+                            toProcess.push({ id: neighborId, layer: layer + 1 });
+                        }
+                    });
+                }
+
+                // Reset all nodes and links
+                this.g.selectAll('.node')
+                    .classed('highlighted', false)
+                    .classed('selected', false)
+                    .classed('dimmed', false);
+
+                this.g.selectAll('.link')
+                    .style('opacity', 0.6);
+
+                // Apply selection styling
+                this.g.selectAll('.node')
+                    .classed('selected', d => d.id === clickedNode.id)
+                    .classed('highlighted', d => relatedNodes.has(d.id) && d.id !== clickedNode.id)
+                    .classed('dimmed', d => !relatedNodes.has(d.id));
+
+                // Highlight related links
+                this.g.selectAll('.link')
+                    .style('opacity', d => {
+                        const sourceId = typeof d.source === 'object' ? d.source.id : d.source;
+                        const targetId = typeof d.target === 'object' ? d.target.id : d.target;
+                        const sourceRelated = relatedNodes.has(sourceId);
+                        const targetRelated = relatedNodes.has(targetId);
+                        return (sourceRelated && targetRelated) ? 0.6 : 0.1;
+                    });
+
+                // Center on clicked node
+                this.centerOnNode(clickedNode);
             }
 
             centerOnNode(node) {
